@@ -49,7 +49,7 @@ class RetryCommentMiddleware(RetryMiddleware):
     def process_response(self, request, response, spider):
         try:
             result = json.loads(response.text)
-            if not result.get('ok') == 1:
+            if result.get('ok') != 1:
                 logger.info('Retrying times %s', request.meta.get('retry_times', 0))
                 return self._retry(request, 'Status not OK', spider) or response
             return response
@@ -67,7 +67,7 @@ class ProxypoolMiddleware(object):
         self.logger = logging.getLogger(__name__)
         if re.search('^https?://\S+:\S+@\S+', proxypool_url):
             result = re.search('https?://(\S+):(\S+)@\S+', proxypool_url)
-            self.auth = result.group(1), result.group(2)
+            self.auth = result[1], result[2]
             self.proxypool_url = re.sub('(https?://)\S+:\S+@(\S+)', r'\1\2', proxypool_url)
         else:
             self.proxypool_url = proxypool_url
@@ -83,8 +83,7 @@ class ProxypoolMiddleware(object):
             else:
                 response = requests.get(self.proxypool_url, timeout=5)
             if response.status_code == 200:
-                proxy = response.text
-                return proxy
+                return response.text
         except requests.ConnectionError:
             return False
     
