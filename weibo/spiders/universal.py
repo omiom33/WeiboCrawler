@@ -108,8 +108,7 @@ class UniversalSpider(Spider):
         if result.get('ok') and result.get('data').get('cards'):
             weibos = result.get('data').get('cards')
             for weibo in weibos:
-                mblog = weibo.get('mblog')
-                if mblog:
+                if mblog := weibo.get('mblog'):
                     weibo_item = WeiboItem()
                     field_map = {
                         'id': 'id', 'attitudes_count': 'attitudes_count', 'comments_count': 'comments_count',
@@ -124,7 +123,7 @@ class UniversalSpider(Spider):
                     yield weibo_item
                     comment_url = self.comment_url.format(id=weibo_item['id'], page=1)
                     yield Request(comment_url, callback=self.parse_comments, dont_filter=True)
-            
+
             # next page
             uid = response.meta.get('uid')
             page = response.meta.get('page') + 1
@@ -142,23 +141,23 @@ class UniversalSpider(Spider):
             comments = result.get('data', {}).get('data')
             params = parse_qs(urlparse(response.url).query)
             if comments:
+                field_map = {
+                    'id': 'id',
+                    'likes_count': 'like_counts',
+                    'text': 'text',
+                    'reply_text': 'reply_text',
+                    'created_at': 'created_at',
+                    'source': 'source',
+                    'user': 'user',
+                    'reply_id': 'reply_id',
+                }
                 for comment in comments:
                     comment_item = CommentItem()
-                    field_map = {
-                        'id': 'id',
-                        'likes_count': 'like_counts',
-                        'text': 'text',
-                        'reply_text': 'reply_text',
-                        'created_at': 'created_at',
-                        'source': 'source',
-                        'user': 'user',
-                        'reply_id': 'reply_id',
-                    }
                     for field, attr in field_map.items():
                         comment_item[field] = comment.get(attr)
                     comment_item['weibo'] = params.get('id')[0]
                     yield comment_item
-                
+
                 # next page
                 page = str(int(params.get('page')[0]) + 1) if params.get('page') else '2'
                 yield Request(self.comment_url.format(id=params.get('id')[0], page=page),

@@ -25,7 +25,7 @@ class TimePipeline():
         :param spider:
         :return:
         """
-        if isinstance(item, UserItem) or isinstance(item, WeiboItem) or isinstance(item, CommentItem):
+        if isinstance(item, (UserItem, WeiboItem, CommentItem)):
             item['crawled_at'] = datetime.now(tz=pytz.utc)
         return item
 
@@ -44,13 +44,13 @@ class WeiboPipeline():
         if re.match('刚刚', date):
             date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         if re.match('\d+分钟前', date):
-            minute = re.match('(\d+)', date).group(1)
+            minute = re.match('(\d+)', date)[1]
             date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - float(minute) * 60))
         if re.match('\d+小时前', date):
-            hour = re.match('(\d+)', date).group(1)
+            hour = re.match('(\d+)', date)[1]
             date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - float(hour) * 60 * 60))
         if re.match('昨天.*', date):
-            date = re.match('昨天(.*)', date).group(1).strip()
+            date = re.match('昨天(.*)', date)[1].strip()
             date = time.strftime('%Y-%m-%d', time.localtime(time.time() - 24 * 60 * 60)) + ' ' + date + ':00'
         if re.match('\d{2}-\d{2}', date):
             date = time.strftime('%Y-', time.localtime()) + date + ' 00:00:00'
@@ -88,13 +88,13 @@ class CommentPipeline():
         if re.match('刚刚', date):
             date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         if re.match('\d+分钟前', date):
-            minute = re.match('(\d+)', date).group(1)
+            minute = re.match('(\d+)', date)[1]
             date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - float(minute) * 60))
         if re.match('\d+小时前', date):
-            hour = re.match('(\d+)', date).group(1)
+            hour = re.match('(\d+)', date)[1]
             date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - float(hour) * 60 * 60))
         if re.match('昨天.*', date):
-            date = re.match('昨天(.*)', date).group(1).strip()
+            date = re.match('昨天(.*)', date)[1].strip()
             date = time.strftime('%Y-%m-%d', time.localtime(time.time() - 24 * 60 * 60)) + ' ' + date + ':00'
         if re.match('\d{2}-\d{2}', date):
             date = time.strftime('%Y-', time.localtime()) + date + ' 00:00:00'
@@ -113,11 +113,13 @@ class CommentPipeline():
             if item.get('text'):
                 item['raw_text'] = ''.join(Selector(text=item.get('text')).xpath('//text()').extract())
                 if re.search('回复.*?\:(.*?)', item.get('raw_text')):
-                    item['raw_text'] = re.search('回复.*?\:(.*)', item.get('raw_text')).group(1)
+                    item['raw_text'] = re.search('回复.*?\:(.*)', item.get('raw_text'))[1]
             if item.get('reply_text'):
                 item['reply_raw_text'] = ''.join(Selector(text=item.get('reply_text')).xpath('//text()').extract())
                 if re.search('回复.*?\:(.*?)', item.get('reply_raw_text')):
-                    item['reply_raw_text'] = re.search('回复.*?\:(.*)', item.get('reply_raw_text')).group(1)
+                    item['reply_raw_text'] = re.search(
+                        '回复.*?\:(.*)', item.get('reply_raw_text')
+                    )[1]
             if item.get('created_at'):
                 item['created_at'] = item['created_at'].strip()
                 item['created_at'] = self.parse_time(item.get('created_at'))
@@ -176,7 +178,7 @@ class MongoPipeline(object):
         :param spider:
         :return:
         """
-        if isinstance(item, UserItem) or isinstance(item, WeiboItem) or isinstance(item, CommentItem):
+        if isinstance(item, (UserItem, WeiboItem, CommentItem)):
             self.db[item.collection].update({'id': item.get('id')}, {'$set': item}, True)
         return item
     
@@ -230,7 +232,7 @@ class ElasticsearchPipeline(object):
         :param spider:
         :return:
         """
-        if isinstance(item, UserItem) or isinstance(item, WeiboItem) or isinstance(item, CommentItem):
+        if isinstance(item, (UserItem, WeiboItem, CommentItem)):
             self.conn.index(index=item.index,
                             id=item['id'],
                             doc_type=item.type,

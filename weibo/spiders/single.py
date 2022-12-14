@@ -54,10 +54,11 @@ class SingleSpider(Spider):
         start from defined users
         :return:
         """
-        if not START_COMMENT_ID:
-            url = self.start_url.format(weibo_id=self.weibo_id)
-        else:
-            url = self.next_url.format(weibo_id=self.weibo_id, max_id=START_COMMENT_ID)
+        url = (
+            self.next_url.format(weibo_id=self.weibo_id, max_id=START_COMMENT_ID)
+            if START_COMMENT_ID
+            else self.start_url.format(weibo_id=self.weibo_id)
+        )
         # 赋值初始 Cookies
         cookies = {
             cookies_item.split('=')[0].strip(): cookies_item.split('=')[1].strip() for cookies_item in
@@ -82,18 +83,18 @@ class SingleSpider(Spider):
                 self.logger.error('Cannot get max_id from %s', response.url)
                 return
             if comments:
+                field_map = {
+                    'id': 'id',
+                    'likes_count': 'like_counts',
+                    'text': 'text',
+                    'reply_text': 'reply_text',
+                    'created_at': 'created_at',
+                    'source': 'source',
+                    'user': 'user',
+                    'reply_id': 'reply_id',
+                }
                 for comment in comments:
                     comment_item = CommentItem()
-                    field_map = {
-                        'id': 'id',
-                        'likes_count': 'like_counts',
-                        'text': 'text',
-                        'reply_text': 'reply_text',
-                        'created_at': 'created_at',
-                        'source': 'source',
-                        'user': 'user',
-                        'reply_id': 'reply_id',
-                    }
                     for field, attr in field_map.items():
                         comment_item[field] = comment.get(attr)
                     comment_item['weibo'] = self.weibo_id
